@@ -1,3 +1,17 @@
+/*
+ *  ARDUINO MORSE CODE PLAYER
+ *  BY SAM 'Figglewatts' GIBSON
+ *
+ *  All these definitions below define the letters encoded as bytes.
+ *  The first 5 bits represent the letter itself (a 0 is a dot and a 1 is a dash).
+ *  For example, 00111 would be ..---, which if you cut out the trailing dots
+ *  is a letter O.
+ *  The final 3 bits represent the length of the letter. The value for this can
+ *  be found by simply converting it to decimal, e.g. 011 would be a length of 3,
+ *  100 would be 4 etc.
+ *  So, the letter O would be 00111011, because it's 3 dots or dashes long.
+ */
+
 #define    letterA    B00001010
 #define    letterB    B01000100
 #define    letterC    B01010100
@@ -25,6 +39,8 @@
 #define    letterY    B01011100
 #define    letterZ    B01100100
 
+// the following are a series of arrays of letters encoded as bytes
+// these are what the system will actually decode and play
 byte the[] = { letterT, letterH, letterE };
 byte quick[] = { letterQ, letterU, letterI, letterC, letterK };
 byte brown[] = { letterB, letterR, letterO, letterW, letterN };
@@ -34,16 +50,13 @@ byte over[] = { letterO, letterV, letterE, letterR };
 byte lazy[] = { letterL, letterA, letterZ, letterY };
 byte dog[] = { letterD, letterO, letterG };
 
-byte bitMask = B00000001;
-byte sizeMask = B00000111;
+byte bitMask = B00000001; // this is a bitmask used for reading the bit on the far right
+byte sizeMask = B00000111; // this is a bitmask used for reading the 3 bits on the left, to determine the letter size
 
 short timeUnit = 50; // the time unit (in milliseconds)
 
 void setup() {
-  // put your setup code here, to run once:
-  pinMode(3, OUTPUT);
-  
-  Serial.begin(9600);
+  pinMode(3, OUTPUT); // set pin 3 (the speaker/piezo) to OUTPUT
 }
 
 void loop() {
@@ -56,43 +69,41 @@ void loop() {
   playMorse(the, 3);
   playMorse(lazy, 4);
   playMorse(dog, 3);
-  Serial.println("END END END");
-  Serial.println("END END END");
-  Serial.println("END END END");
-  Serial.println("END END END");
-  Serial.println("END END END");
 }
 
+// the playMorse function does exactly that
+// it plays the array of letters with length specified
 void playMorse(byte message[], int length) {
+  // for each letter (byte) in the array
   for (int iterator = 0; iterator < length; iterator++)
   {
-    byte morseLetter = message[iterator];
+    byte morseLetter = message[iterator]; // make a temporary copy
     
-    int letterSize = morseLetter & sizeMask;
-    morseLetter = morseLetter >> 3;
+    int letterSize = morseLetter & sizeMask; // apply the size bitmask to determine the letter size
+    morseLetter = morseLetter >> 3; // shift the byte 3 bits to the right since we don't need the rightmost 3 bits anymore
     
-    boolean morseTones[letterSize];
+    boolean morseTones[letterSize]; // make an array of booleans to store what is a dot and what is a dash
     
+    // for each dot or dash in the letter
     for (int iterator = 0; iterator < letterSize; iterator++)
     {
-      morseTones[letterSize - iterator] = morseLetter & bitMask;
-      morseLetter = morseLetter >> 1;
-      //Serial.print(morseTones[letterSize - i]);
+      morseTones[letterSize - iterator] = morseLetter & bitMask; // read the rightmost bit using the bitmask, and put it into the boolean array as a boolean
+      morseLetter = morseLetter >> 1; // shift the bits right by one so we can read the next bit
     }
     
+    // for each boolean in the boolean array
     for (int iterator = 1; iterator <= sizeof(morseTones); iterator++)
     {
+      // if it was a 1 in the byte
       if (morseTones[iterator] == true) {
-        tone(3, 900, timeUnit*3); // dah
-        Serial.print("-");
+        tone(3, 900, timeUnit*3); // we have a dah (dash, or 1), so play it
       }
       else {
-        tone(3, 900, timeUnit); // dit
-        Serial.print(".");
+        // it was a 0 in the byte
+        tone(3, 900, timeUnit); // we have a dit (dot, or 0), so play it
       }
-      delay(timeUnit*7); // space between letter
+      delay(timeUnit*7); // wait for space between letter (supposed to be equal to 3 time units, but changed for hearability)
     }
-    delay(timeUnit*14); // space between word
-    Serial.println();
+    delay(timeUnit*14); // wait for space between word (supposed to be equal to 7 time units, but changed for hearability)
   }
 }
